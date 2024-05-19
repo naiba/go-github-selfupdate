@@ -97,7 +97,7 @@ func findReleaseAndAsset(rels []*github.RepositoryRelease,
 		for _, ext := range []string{".zip", ".tar.gz", ".tgz", ".gzip", ".gz", ".tar.xz", ".xz", ""} {
 			suffix := fmt.Sprintf("%s%c%s%s", runtime.GOOS, sep, runtime.GOARCH, ext)
 			if isWin10 {
-				suffix := fmt.Sprintf("%s%c%s%s", "windows10", sep, runtime.GOARCH, ext)
+				suffix = fmt.Sprintf("%s%c%s%s", "windows10", sep, runtime.GOARCH, ext)
 			}
 			suffixes = append(suffixes, suffix)
 			if runtime.GOOS == "windows" {
