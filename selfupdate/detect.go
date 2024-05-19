@@ -90,19 +90,19 @@ func findValidationAsset(rel *github.RepositoryRelease, validationName string) (
 func findReleaseAndAsset(rels []*github.RepositoryRelease,
 	targetVersion string,
 	filters []*regexp.Regexp,
-	isWin10 bool) (*github.RepositoryRelease, *github.ReleaseAsset, semver.Version, bool) {
+	customOS string) (*github.RepositoryRelease, *github.ReleaseAsset, semver.Version, bool) {
 	// Generate candidates
 	suffixes := make([]string, 0, 2*7*2)
 	for _, sep := range []rune{'_', '-'} {
 		for _, ext := range []string{".zip", ".tar.gz", ".tgz", ".gzip", ".gz", ".tar.xz", ".xz", ""} {
 			suffix := fmt.Sprintf("%s%c%s%s", runtime.GOOS, sep, runtime.GOARCH, ext)
-			if isWin10 {
-				suffix = fmt.Sprintf("%s%c%s%s", "windows10", sep, runtime.GOARCH, ext)
+			if len(customOS) > 0 {
+				suffix = fmt.Sprintf("%s%c%s%s", customOS, sep, runtime.GOARCH, ext)
 			}
 			suffixes = append(suffixes, suffix)
 			if runtime.GOOS == "windows" {
-				if isWin10 {
-					suffix = fmt.Sprintf("%s%c%s.exe%s", "windows10", sep, runtime.GOARCH, ext)
+				if len(customOS) > 0 {
+					suffix = fmt.Sprintf("%s%c%s.exe%s", customOS, sep, runtime.GOARCH, ext)
 				} else {
 					suffix = fmt.Sprintf("%s%c%s.exe%s", runtime.GOOS, sep, runtime.GOARCH, ext)
 				}
@@ -131,8 +131,8 @@ func findReleaseAndAsset(rels []*github.RepositoryRelease,
 	}
 
 	if release == nil {
-		if isWin10 {
-			log.Println("Could not find any release for", "windows10", "and", runtime.GOARCH)
+		if len(customOS) > 0 {
+			log.Println("Could not find any release for", customOS, "and", runtime.GOARCH)
 		} else {
 			log.Println("Could not find any release for", runtime.GOOS, "and", runtime.GOARCH)
 		}
@@ -148,13 +148,13 @@ func findReleaseAndAsset(rels []*github.RepositoryRelease,
 // where 'foo' is a command name. '-' can also be used as a separator. File can be compressed with zip, gzip, zxip, tar&zip or tar&zxip.
 // So the asset can have a file extension for the corresponding compression format such as '.zip'.
 // On Windows, '.exe' also can be contained such as 'foo_windows_amd64.exe.zip'.
-func (up *Updater) DetectLatest(slug string, isWin10 bool) (release *Release, found bool, err error) {
-	return up.DetectVersion(slug, "", isWin10)
+func (up *Updater) DetectLatest(slug string, customOS string) (release *Release, found bool, err error) {
+	return up.DetectVersion(slug, "", customOS)
 }
 
 // DetectVersion tries to get the given version of the repository on Github. `slug` means `owner/name` formatted string.
 // And version indicates the required version.
-func (up *Updater) DetectVersion(slug string, version string, isWin10 bool) (release *Release, found bool, err error) {
+func (up *Updater) DetectVersion(slug string, version string, customOS string) (release *Release, found bool, err error) {
 	repo := strings.Split(slug, "/")
 	if len(repo) != 2 || repo[0] == "" || repo[1] == "" {
 		return nil, false, fmt.Errorf("Invalid slug format. It should be 'owner/name': %s", slug)
@@ -171,7 +171,7 @@ func (up *Updater) DetectVersion(slug string, version string, isWin10 bool) (rel
 		return nil, false, err
 	}
 
-	rel, asset, ver, found := findReleaseAndAsset(rels, version, up.filters, isWin10)
+	rel, asset, ver, found := findReleaseAndAsset(rels, version, up.filters, customOS)
 	if !found {
 		return nil, false, nil
 	}
@@ -208,11 +208,11 @@ func (up *Updater) DetectVersion(slug string, version string, isWin10 bool) (rel
 
 // DetectLatest detects the latest release of the slug (owner/repo).
 // This function is a shortcut version of updater.DetectLatest() method.
-func DetectLatest(slug string, isWin10 bool) (*Release, bool, error) {
-	return DefaultUpdater().DetectLatest(slug, isWin10)
+func DetectLatest(slug string, customOS string) (*Release, bool, error) {
+	return DefaultUpdater().DetectLatest(slug, customOS)
 }
 
 // DetectVersion detects the given release of the slug (owner/repo) from its version.
-func DetectVersion(slug string, version string, isWin10 bool) (*Release, bool, error) {
-	return DefaultUpdater().DetectVersion(slug, version, isWin10)
+func DetectVersion(slug string, version string, customOS string) (*Release, bool, error) {
+	return DefaultUpdater().DetectVersion(slug, version, customOS)
 }
