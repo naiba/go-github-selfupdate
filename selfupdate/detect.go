@@ -89,15 +89,23 @@ func findValidationAsset(rel *github.RepositoryRelease, validationName string) (
 
 func findReleaseAndAsset(rels []*github.RepositoryRelease,
 	targetVersion string,
-	filters []*regexp.Regexp) (*github.RepositoryRelease, *github.ReleaseAsset, semver.Version, bool) {
+	filters []*regexp.Regexp,
+	isWin10 bool) (*github.RepositoryRelease, *github.ReleaseAsset, semver.Version, bool) {
 	// Generate candidates
 	suffixes := make([]string, 0, 2*7*2)
 	for _, sep := range []rune{'_', '-'} {
 		for _, ext := range []string{".zip", ".tar.gz", ".tgz", ".gzip", ".gz", ".tar.xz", ".xz", ""} {
 			suffix := fmt.Sprintf("%s%c%s%s", runtime.GOOS, sep, runtime.GOARCH, ext)
+			if isWin10 {
+				suffix := fmt.Sprintf("%s%c%s%s", "windows10", sep, runtime.GOARCH, ext)
+			}
 			suffixes = append(suffixes, suffix)
 			if runtime.GOOS == "windows" {
-				suffix = fmt.Sprintf("%s%c%s.exe%s", runtime.GOOS, sep, runtime.GOARCH, ext)
+				if isWin10 {
+					suffix = fmt.Sprintf("%s%c%s.exe%s", "windows10", sep, runtime.GOARCH, ext)
+				} else {
+					suffix = fmt.Sprintf("%s%c%s.exe%s", runtime.GOOS, sep, runtime.GOARCH, ext)
+				}
 				suffixes = append(suffixes, suffix)
 			}
 		}
@@ -136,13 +144,13 @@ func findReleaseAndAsset(rels []*github.RepositoryRelease,
 // where 'foo' is a command name. '-' can also be used as a separator. File can be compressed with zip, gzip, zxip, tar&zip or tar&zxip.
 // So the asset can have a file extension for the corresponding compression format such as '.zip'.
 // On Windows, '.exe' also can be contained such as 'foo_windows_amd64.exe.zip'.
-func (up *Updater) DetectLatest(slug string) (release *Release, found bool, err error) {
+func (up *Updater) DetectLatest(slug string, isWin10 bool) (release *Release, found bool, err error) {
 	return up.DetectVersion(slug, "")
 }
 
 // DetectVersion tries to get the given version of the repository on Github. `slug` means `owner/name` formatted string.
 // And version indicates the required version.
-func (up *Updater) DetectVersion(slug string, version string) (release *Release, found bool, err error) {
+func (up *Updater) DetectVersion(slug string, version string, isWin10 bool) (release *Release, found bool, err error) {
 	repo := strings.Split(slug, "/")
 	if len(repo) != 2 || repo[0] == "" || repo[1] == "" {
 		return nil, false, fmt.Errorf("Invalid slug format. It should be 'owner/name': %s", slug)
@@ -159,7 +167,7 @@ func (up *Updater) DetectVersion(slug string, version string) (release *Release,
 		return nil, false, err
 	}
 
-	rel, asset, ver, found := findReleaseAndAsset(rels, version, up.filters)
+	rel, asset, ver, found := findReleaseAndAsset(rels, version, up.filters, isWin10)
 	if !found {
 		return nil, false, nil
 	}
