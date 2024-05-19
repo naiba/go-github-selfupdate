@@ -97,7 +97,7 @@ func findReleaseAndAsset(rels []*github.RepositoryRelease,
 		for _, ext := range []string{".zip", ".tar.gz", ".tgz", ".gzip", ".gz", ".tar.xz", ".xz", ""} {
 			suffix := fmt.Sprintf("%s%c%s%s", runtime.GOOS, sep, runtime.GOARCH, ext)
 			if isWin10 {
-				suffix := fmt.Sprintf("%s%c%s%s", "windows10", sep, runtime.GOARCH, ext)
+				suffix = fmt.Sprintf("%s%c%s%s", "windows10", sep, runtime.GOARCH, ext)
 			}
 			suffixes = append(suffixes, suffix)
 			if runtime.GOOS == "windows" {
@@ -131,7 +131,11 @@ func findReleaseAndAsset(rels []*github.RepositoryRelease,
 	}
 
 	if release == nil {
-		log.Println("Could not find any release for", runtime.GOOS, "and", runtime.GOARCH)
+		if isWin10 {
+			log.Println("Could not find any release for", "windows10", "and", runtime.GOARCH)
+		} else {
+			log.Println("Could not find any release for", runtime.GOOS, "and", runtime.GOARCH)
+		}
 		return nil, nil, semver.Version{}, false
 	}
 
@@ -145,7 +149,7 @@ func findReleaseAndAsset(rels []*github.RepositoryRelease,
 // So the asset can have a file extension for the corresponding compression format such as '.zip'.
 // On Windows, '.exe' also can be contained such as 'foo_windows_amd64.exe.zip'.
 func (up *Updater) DetectLatest(slug string, isWin10 bool) (release *Release, found bool, err error) {
-	return up.DetectVersion(slug, "")
+	return up.DetectVersion(slug, "", isWin10)
 }
 
 // DetectVersion tries to get the given version of the repository on Github. `slug` means `owner/name` formatted string.
@@ -204,11 +208,11 @@ func (up *Updater) DetectVersion(slug string, version string, isWin10 bool) (rel
 
 // DetectLatest detects the latest release of the slug (owner/repo).
 // This function is a shortcut version of updater.DetectLatest() method.
-func DetectLatest(slug string) (*Release, bool, error) {
-	return DefaultUpdater().DetectLatest(slug)
+func DetectLatest(slug string, isWin10 bool) (*Release, bool, error) {
+	return DefaultUpdater().DetectLatest(slug, isWin10)
 }
 
 // DetectVersion detects the given release of the slug (owner/repo) from its version.
-func DetectVersion(slug string, version string) (*Release, bool, error) {
-	return DefaultUpdater().DetectVersion(slug, version)
+func DetectVersion(slug string, version string, isWin10 bool) (*Release, bool, error) {
+	return DefaultUpdater().DetectVersion(slug, version, isWin10)
 }
