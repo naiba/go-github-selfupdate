@@ -7,6 +7,9 @@ import (
 	"regexp"
 
 	"gitee.com/naibahq/go-gitee/gitee"
+	"github.com/gregjones/httpcache"
+	"github.com/gregjones/httpcache/diskcache"
+	"github.com/peterbourgon/diskv"
 )
 
 // GiteeUpdater contains Gitee client and its context.
@@ -36,7 +39,9 @@ func NewGiteeUpdater(config Config) (*GiteeUpdater, error) {
 	}
 
 	conf := gitee.NewConfiguration()
-	conf.HTTPClient = newHTTPClient(ctx, token)
+	cache := diskcache.NewWithDiskv(diskv.New(diskv.Options{}))
+	transport := httpcache.NewTransport(cache)
+	conf.HTTPClient = newHTTPClient(transport, token)
 
 	client := gitee.NewAPIClient(conf)
 	return &GiteeUpdater{api: client, apiCtx: ctx, validator: config.Validator, filters: filtersRe}, nil
@@ -52,6 +57,8 @@ func DefaultGiteeUpdater() *GiteeUpdater {
 	// }
 	ctx := context.Background()
 	conf := gitee.NewConfiguration()
-	conf.HTTPClient = newHTTPClient(ctx, token)
+	cache := diskcache.NewWithDiskv(diskv.New(diskv.Options{}))
+	transport := httpcache.NewTransport(cache)
+	conf.HTTPClient = newHTTPClient(transport, token)
 	return &GiteeUpdater{api: gitee.NewAPIClient(conf), apiCtx: ctx}
 }

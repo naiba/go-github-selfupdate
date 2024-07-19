@@ -8,6 +8,9 @@ import (
 	"regexp"
 
 	"github.com/google/go-github/github"
+	"github.com/gregjones/httpcache"
+	"github.com/gregjones/httpcache/diskcache"
+	"github.com/peterbourgon/diskv"
 	gitconfig "github.com/tcnksm/go-gitconfig"
 	"golang.org/x/oauth2"
 )
@@ -39,12 +42,17 @@ type Config struct {
 	Filters []string
 }
 
-func newHTTPClient(ctx context.Context, token string) *http.Client {
+func newHTTPClient(transport http.RoundTripper, token string) *http.Client {
 	if token == "" {
 		return http.DefaultClient
 	}
 	src := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-	return oauth2.NewClient(ctx, src)
+	return &http.Client{
+		Transport: &oauth2.Transport{
+			Base:   transport,
+			Source: src,
+		},
+	}
 }
 
 // NewUpdater creates a new updater instance. It initializes GitHub API client.
@@ -58,7 +66,9 @@ func NewUpdater(config Config) (*Updater, error) {
 		token, _ = gitconfig.GithubToken()
 	}
 	ctx := context.Background()
-	hc := newHTTPClient(ctx, token)
+	cache := diskcache.NewWithDiskv(diskv.New(diskv.Options{}))
+	transport := httpcache.NewTransport(cache)
+	hc := newHTTPClient(transport, token)
 
 	filtersRe := make([]*regexp.Regexp, 0, len(config.Filters))
 	for _, filter := range config.Filters {
@@ -94,6 +104,8 @@ func DefaultUpdater() *Updater {
 		token, _ = gitconfig.GithubToken()
 	}
 	ctx := context.Background()
-	client := newHTTPClient(ctx, token)
+	cache := diskcache.NewWithDiskv(diskv.New(diskv.Options{}))
+	transport := httpcache.NewTransport(cache)
+	client := newHTTPClient(transport, token)
 	return &Updater{api: github.NewClient(client), apiCtx: ctx}
 }
