@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/google/go-github/github"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
-	"github.com/peterbourgon/diskv"
 	gitconfig "github.com/tcnksm/go-gitconfig"
 	"golang.org/x/oauth2"
 )
@@ -66,7 +66,12 @@ func NewUpdater(config Config) (*Updater, error) {
 		token, _ = gitconfig.GithubToken()
 	}
 	ctx := context.Background()
-	cache := diskcache.NewWithDiskv(diskv.New(diskv.Options{}))
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		cacheDir = os.TempDir()
+	}
+	dir := filepath.Join(cacheDir, "nezha", "agent")
+	cache := diskcache.New(dir)
 	transport := httpcache.NewTransport(cache)
 	hc := newHTTPClient(transport, token)
 
@@ -104,7 +109,12 @@ func DefaultUpdater() *Updater {
 		token, _ = gitconfig.GithubToken()
 	}
 	ctx := context.Background()
-	cache := diskcache.NewWithDiskv(diskv.New(diskv.Options{}))
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		cacheDir = os.TempDir()
+	}
+	dir := filepath.Join(cacheDir, "nezha", "agent")
+	cache := diskcache.New(dir)
 	transport := httpcache.NewTransport(cache)
 	client := newHTTPClient(transport, token)
 	return &Updater{api: github.NewClient(client), apiCtx: ctx}
